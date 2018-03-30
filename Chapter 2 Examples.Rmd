@@ -1,0 +1,100 @@
+---
+title: "Chapter 2 Examples"
+author: "CW"
+date: "March 29, 2018"
+output: word_document
+---
+
+Hwk #2: Chapter 2 Questions 3, 5, 6, 7, 9, and 10 
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+At the beginning of any session for this course you **must** load the fpp2 package.  This requires installing it once, but using the "library(fpp2)" command every time you are in an R session.
+
+The fpp2 package has all of the data that we need for this course, plus loads as dependencies all (or nearly all) of the R packages that we need for this course.
+
+```{r Packages}
+
+library ( fpp2 )
+
+```
+
+There are several data sets used throughout the FPP2 book, all of which are in the fpp2 package.  If you click on fpp2 in the list of packages, all of the data will show up.  To get details of a particular dataset, use the "help" command.
+
+```{r FPP2_data}
+
+help(qgas)
+
+```
+
+Almost all of the data for this course is time series data: data from one entity observed at regular intervals over time.
+
+The *frequency* is how many observations are made per year.  
+
+To check if something is a time series, use the "is.ts()" command.
+
+To create a time series, use the "ts()" commands with "start=", "end=", and "frequency=" arguments as needed.  For frequency, it's number of observations per year.  So "freq = 4" is quarterly data, for example.
+
+You can use the "frequency()" command to check the frequncy of a time series.
+```{r ts}
+
+is.ts(qgas)
+frequency(qgas)
+
+```
+
+The very first step in **EVERY** forecasting procedure is to plot the data to identify patterns, outliers, etc.  The data in this book are set up to use the "autoplot" function from the ggplot2 package.
+
+Chapter 1 Exercise #1
+
+Use the help function to explore what the series gold, woolyrnq and gas represent.
+a. Use autoplot() to plot each of these in separate plots.
+b. What is the frequency of each series? Hint: apply the frequency() function.
+c. Use which.max() to spot the outlier in the gold series. Which observation was it?
+
+```{r}
+
+# Question 1a
+
+help(gold)
+help(woolyrnq)
+help(gas)
+
+autoplot(gold) +
+  ggtitle("Daily morning gold prices") +
+  ylab("U.S. Dollars") +
+  xlab("Day: 1 Jan 1985 -- 31 March 1989")
+
+# Question 1b
+
+frequency ( woolyrnq )
+
+# Question 1c
+
+which.max ( gold )
+
+```
+
+Chapter 1 Question #2
+
+```{r}
+
+## Read in the data
+
+library(readr)
+tute1 <- read_csv("~/CWU/ECON 325/R Code ECON 325 Examples/tute1.csv")
+View(tute1)
+
+## Convert to time series
+
+mytimeseries <- ts(tute1[,-1], start=1981, frequency=4)
+
+## Plot the series
+
+autoplot(mytimeseries, facets=TRUE)
+
+```
+
