@@ -24,8 +24,7 @@ summary ( cherries.tslm )
 # and lower prices. Conversely, lower temperatures might indicate winter months
 # when supply of cherries is low and prices are adjusted accordingly.
 
-cherries.fit <- tslm ( Cherries_lb ~ Temp, data = cherries )
-residuals(cherries.fit) %>% autoplot() + geom_abline(slope = 0, intercept = 0, color = "red" )
+residuals(cherries.tslm) %>% autoplot() + geom_abline(slope = 0, intercept = 0, color = "red" )
 
 # The residual plot looks to be quite adequate, although there is an observation in the
 # high 50 degree range that could be inspected as an outlier.
@@ -38,6 +37,9 @@ cherries.resid.plot
 
 cherries.tslm %>% checkresiduals()
 
+# Now the forecast. You need to plug in the specific value for Temp that you want to forecast a cherry price for.
+# This is NOT like the rwf(), etc., forecasts where you're extrapolating out through time.
+
 cherries.fcast <- forecast ( cherries.tslm, newdata = data.frame ( Temp = 60 ) )
 
 cherries.fcast.df <- data.frame ( Temp = 60, Cherries_lb = cherries.fcast$mean[1] )
@@ -48,7 +50,7 @@ cherries.df %>% ggplot(aes(y=Cherries_lb, x=Temp)) + geom_point(alpha = 0.5) +
   geom_ribbon(aes(x=60, ymin = cherries.fcast$lower[1], ymax = cherries.fcast$upper[1]), color = "lightblue", 
                 size = 1.25, alpha = 0.1) + 
   geom_abline(slope = 0, intercept = cherries.fcast$mean, linetype = 3, color = "red") +
-  geom_abline(slope = cherries.fit$coefficients[2], intercept = cherries.fit$coefficients[1], linetype = 2, col = "green" )
+  geom_abline(slope = cherries.tslm$coefficients[2], intercept = cherries.tslm$coefficients[1], linetype = 2, col = "green" )
   
 # This gives a graphical representation of the regression line and a chosen temperature
 # to forecast (in this case 60). R will highlight a point on the line and shade its confidence
@@ -79,7 +81,7 @@ autoplot(IMRts) + geom_smooth(method = "lm", se = FALSE) + ylab ( "Infant Mortal
 
 IMR.tsfit <- tslm ( IMRts ~ trend )
 
-IMR.tsf <- forecast ( tsfit, h = 10,level = c(80,95) )
+IMR.tsf <- forecast ( IMR.tsfit, h = 10,level = c(80,95) )
 
 autoplot(IMR.tsf) + ylab ("IMR per 1000")
      
@@ -94,6 +96,23 @@ IMRts.resid.plot <- ggplot ( IMRts.df, aes ( x = IMRts, y = Residuals ) ) + geom
   geom_abline(slope=0, intercept = 0, color = "red", linetype = 2)
 
 IMRts.resid.plot
+
+
+### To plot residuals vs. year
+
+IMRts.resid.plot2 <- ggplot ( IMRts.df, aes ( x = InfantMor$year, y = Residuals ) ) + geom_point() + 
+  geom_abline(slope=0, intercept = 0, color = "red", linetype = 2)
+
+IMRts.resid.plot2
+
+### OR
+
+IMRts.resid.plot3 <- ggplot ( IMRts.df, aes ( x = seq(1950, 1970, by = 1), y = Residuals ) ) + geom_point() + 
+  geom_abline(slope=0, intercept = 0, color = "red", linetype = 2)
+
+IMRts.resid.plot3
+
+#########################
 
 IMR.tsf %>% residuals() %>% autoplot()
 
@@ -115,4 +134,3 @@ forecast ( IMR.tsfit, newdata = data.frame ( year = c(1980) ) )
 
 # Assumptions: That is trend will continue in a linear fashion into the future
      
-
