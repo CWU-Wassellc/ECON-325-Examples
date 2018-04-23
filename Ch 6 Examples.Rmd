@@ -1,0 +1,188 @@
+---
+title: "Chapter 6 Moving Averages"
+author: "CW"
+date: "April 22, 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r libraries, include = FALSE, message = FALSE, warning = FALSE}
+library(fpp2)
+library(gridExtra)
+library(data.table)
+library(zoo)
+library(ggseas)
+
+```
+
+## Example of time series components
+
+The data "motion" shows the monthly employment figures for the motion picture industry for 192 months from Jan 1955 through Dec 1970.
+
+```{r initial.plots}
+
+motion.plot <- autoplot(motion) + xlab("Date (Observations are Monthly)") + ylab("Employment") +
+  ggtitle("Motion Picture Industry Employment")
+motion.plot
+
+ggmonthplot(motion) + ylab("Motion Picture Employment")
+```
+
+Note the distinct semi-annual pattern.  One would expect strong/significant autocorrelations at 6/12/18 months on an Acf plot.  There is also a pronounced cyclical pattern, with a decline in employment until approximately 1963, with a recovery thereafter.
+
+```{r moving.avg}
+
+autoplot(motion, series="Data") +
+  autolayer(ma(motion,5), series="5-MA") +
+  xlab("Year") + ylab("Employment") +
+  ggtitle("Employment in Motion Picture Industry") +
+  scale_colour_manual(values=c("Data"="grey50","5-MA"="red"),
+                      breaks=c("Data","5-MA"))
+
+motion.ma3 <- ma(motion, 3)
+motion.ma5 <- ma(motion, 5)
+motion.ma7 <- ma(motion, 7)
+motion.ma9 <- ma(motion, 9)
+
+motion.p1 <- autoplot(motion.ma3) + ggtitle("MA-3")
+motion.p2 <- autoplot(motion.ma5) + ggtitle("MA-5")
+motion.p3 <- autoplot(motion.ma7) + ggtitle("MA-7")
+motion.p4 <- autoplot(motion.ma9) + ggtitle("MA-9")
+
+grid.arrange(motion.p1, motion.p2, motion.p3, motion.p4)
+
+```
+As the order of the moving average increases, the amount of variation in the series decreases.
+
+```{r MA12}
+
+autoplot(motion, series="Data") +
+  autolayer(ma(motion,12), series="12-MA") +
+  xlab("Year") + ylab("Employment") +
+  ggtitle("Employment in Motion Picture Industry") +
+  scale_colour_manual(values=c("Data"="grey50","12-MA"="red"),
+                      breaks=c("Data","12-MA"))
+
+```
+
+Note that this MA-12 series has virtually no seasonality whatsoever, given that this is monthly data.
+
+# Classical Decomposition
+
+In classical decomposition, data are split into three components -- a trend component, seasonal component, and a remainder.  There are two ways to do this, additively and multiplicatively, and the "best" way depends on the nature of the data.  As an example of both the general decomposition process, and of which method should be chosen, consider the following two examples.
+
+```{r decomposition}
+
+motiondata <- motion
+motiondata <- data.table(motion)
+motiondata$date <- as.Date(motion)
+setcolorder(motiondata, c("date","motion"))
+
+knitr::kable(head(motiondata))
+```
+
+### Add trend
+
+The first component to extract is the trend. There are a number of ways you can do this, and some of the simplest ways involve calculating a moving average or median.
+
+```{r}
+motiondata[,trend := zoo::rollmean(motion, 13, fill=NA, align = "right")]
+knitr::kable(tail(motiondata))
+```
+
+### De-trend data
+
+Seasonality will be cyclical patterns that occur in our time series once the data has had trend removed.
+
+Of course, the way to de-trend the data needs to additive or multiplicative depending on what type your time series is. Since we don’t know the type of time series at this point, we’ll do both.
+
+To work out the seasonality we need to work out what the typical de-trended values are over a cycle. Here I will calculate the mean value for the observations in each month.
+
+```{r}
+
+motiondata[,`:=`( detrended_a = motion - trend,  detrended_m = motion / trend )]
+knitr::kable(tail(motiondata))
+
+motiondata[,`:=`(seasonal_a = mean(detrended_a, na.rm = TRUE),
+             seasonal_m = mean(detrended_m, na.rm = TRUE)), 
+          by=.(month(date)) ]
+knitr::kable(tail(motiondata))
+```
+
+### Make residuals
+
+Now that we have our two components, we can calculate the residual in both situations and see which has the better fit.
+
+```{r}
+motiondata[,`:=`( residual_a = detrended_a - seasonal_a, 
+                 residual_m = detrended_m / seasonal_m )]
+knitr::kable(tail(motiondata))
+```
+
+
+### Assessing visually
+
+```{r}
+# Additive
+ggsdc(motiondata, aes(x = date, y = motion), method = "decompose", 
+      frequency = 12, s.window = 13, type = "additive")+ geom_line()+
+  ggtitle("Additive")+ theme_minimal()
+
+# Multiplicative
+ggsdc(motiondata, aes(x = date, y = motion), method = "decompose", 
+      frequency = 12, s.window = 13, type = "multiplicative")+ geom_line()+
+  ggtitle("Additive")+ theme_minimal()
+
+
+```
+
+### Assessing fit
+
+After decomposing our data, we need to compare the residuals. We’re going to check how much correlation between data points is still encoded within the residuals. This is the Auto-Correlation Factor (ACF) and it has a function for calculating it. As some of the correlations could be negative we will select the type with the smallest sum of squares of correlation values.
+
+```{r}
+
+ssacf<- function(x) sum(acf(x, na.action = na.omit)$acf^2)
+compare_ssacf<-function(add,mult) ifelse(ssacf(add)< ssacf(mult), "Additive", "Multiplicative") 
+motiondata[,.(ts_type = compare_ssacf(residual_a, residual_m ))]
+
+```
+
+### Another example
+
+```{r}
+plastics.dt <- data.table(plastics)
+plastics.dt$date <- as.Date(plastics)
+setcolorder(plastics.dt, c("date","plastics"))
+
+# Combined function
+ssacf<- function(x) sum(acf(x, na.action = na.omit, plot = FALSE)$acf^2)
+compare_ssacf<-function(add,mult) ifelse(ssacf(add)< ssacf(mult), 
+                                         "Additive", "Multiplicative") 
+additive_or_multiplicative <- function(dt){
+  m<-copy(dt)
+  m[,trend := zoo::rollmean(plastics, 13, fill="extend", align = "right")]
+  m[,`:=`( detrended_a = plastics - trend,  detrended_m = plastics / trend )]
+  m[plastics==0,detrended_m:= 0]
+  m[,`:=`(seasonal_a = mean(detrended_a, na.rm = TRUE),
+                  seasonal_m = mean(detrended_m, na.rm = TRUE)), 
+            by=.(month(date)) ]
+  m[is.infinite(seasonal_m),seasonal_m:= 1]
+  m[,`:=`( residual_a = detrended_a - seasonal_a, 
+                   residual_m = detrended_m / seasonal_m)]
+  compare_ssacf(m$residual_a, m$residual_m )
+}
+
+# Run on plastics.dt
+
+additive_or_multiplicative(plastics.dt)
+
+# Get "additive"
+
+```
+
