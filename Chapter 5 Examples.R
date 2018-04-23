@@ -25,11 +25,15 @@ summary ( cherries.tslm )
 # when supply of cherries is low and prices are adjusted accordingly.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 residuals(cherries.tslm) %>% autoplot() + geom_abline(slope = 0, intercept = 0, color = "red" )
 =======
 cherries.fit <- tslm ( Cherries_lb ~ Temp, data = cherries )
 residuals(cherries.fit) %>% autoplot() + geom_abline(slope = 0, intercept = 0, color = "red" )
 >>>>>>> 7375807b1c34f135df14eec31a1e752051c98261
+=======
+residuals(cherries.tslm) %>% autoplot() + geom_abline(slope = 0, intercept = 0, color = "red" )
+>>>>>>> master
 
 # The residual plot looks to be quite adequate, although there is an observation in the
 # high 50 degree range that could be inspected as an outlier.
@@ -43,11 +47,17 @@ cherries.resid.plot
 cherries.tslm %>% checkresiduals()
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Now the forecast. You need to plug in the specific value for Temp that you want to forecast a cherry price for.
 # This is NOT like the rwf(), etc., forecasts where you're extrapolating out through time.
 
 =======
 >>>>>>> 7375807b1c34f135df14eec31a1e752051c98261
+=======
+# Now the forecast. You need to plug in the specific value for Temp that you want to forecast a cherry price for.
+# This is NOT like the rwf(), etc., forecasts where you're extrapolating out through time.
+
+>>>>>>> master
 cherries.fcast <- forecast ( cherries.tslm, newdata = data.frame ( Temp = 60 ) )
 
 cherries.fcast.df <- data.frame ( Temp = 60, Cherries_lb = cherries.fcast$mean[1] )
@@ -59,10 +69,14 @@ cherries.df %>% ggplot(aes(y=Cherries_lb, x=Temp)) + geom_point(alpha = 0.5) +
                 size = 1.25, alpha = 0.1) + 
   geom_abline(slope = 0, intercept = cherries.fcast$mean, linetype = 3, color = "red") +
 <<<<<<< HEAD
+<<<<<<< HEAD
   geom_abline(slope = cherries.tslm$coefficients[2], intercept = cherries.tslm$coefficients[1], linetype = 2, col = "green" )
 =======
   geom_abline(slope = cherries.fit$coefficients[2], intercept = cherries.fit$coefficients[1], linetype = 2, col = "green" )
 >>>>>>> 7375807b1c34f135df14eec31a1e752051c98261
+=======
+  geom_abline(slope = cherries.tslm$coefficients[2], intercept = cherries.tslm$coefficients[1], linetype = 2, col = "green" )
+>>>>>>> master
   
 # This gives a graphical representation of the regression line and a chosen temperature
 # to forecast (in this case 60). R will highlight a point on the line and shade its confidence
@@ -94,10 +108,14 @@ autoplot(IMRts) + geom_smooth(method = "lm", se = FALSE) + ylab ( "Infant Mortal
 IMR.tsfit <- tslm ( IMRts ~ trend )
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 IMR.tsf <- forecast ( IMR.tsfit, h = 10,level = c(80,95) )
 =======
 IMR.tsf <- forecast ( tsfit, h = 10,level = c(80,95) )
 >>>>>>> 7375807b1c34f135df14eec31a1e752051c98261
+=======
+IMR.tsf <- forecast ( IMR.tsfit, h = 10,level = c(80,95) )
+>>>>>>> master
 
 autoplot(IMR.tsf) + ylab ("IMR per 1000")
      
@@ -114,6 +132,9 @@ IMRts.resid.plot <- ggplot ( IMRts.df, aes ( x = IMRts, y = Residuals ) ) + geom
 IMRts.resid.plot
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> master
 
 ### To plot residuals vs. year
 
@@ -151,6 +172,7 @@ forecast ( IMR.tsfit, newdata = data.frame ( year = c(1980) ) )
 
 # Assumptions: That is trend will continue in a linear fashion into the future
      
+<<<<<<< HEAD
 
 ######################## Code suggestions for question 5
 
@@ -177,3 +199,5 @@ fcast <- forecast(fit, future_data, h=36)
 back.transform <- InvBoxCox(fcast$mean,lambda=0)
 back.transform_upper <- InvBoxCox(fcast$upper[,2],lambda=0)
 back.transform_lower <- InvBoxCox(fcast$lower[,2],lambda=0)
+=======
+>>>>>>> master
