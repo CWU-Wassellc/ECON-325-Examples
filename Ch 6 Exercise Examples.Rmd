@@ -1,0 +1,167 @@
+---
+title: "Ch 6 Exercise Examples"
+author: "CW"
+date: "April 24, 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries}
+library(fpp2)
+library(seasonal)
+library(gridExtra)
+library(Mcomp)
+library(stlplus)
+```
+
+# Ch 6 Exercise Examples
+
+## Data
+
+For these exercises we will use data from the M3 forecasting competition.  This particular one is Electric power, production by waterpower, total, monthly time series from 1982 to 1994, with the final 18 months being the test set.
+
+```{r}
+data <- (subset(M3,"INDUSTRY","monthly"))[3]
+train <- data$N1878$x
+test <- data$N1878$xx
+```
+
+## General Approach
+
+These are a combination of questions 1, 5, 6, and 7/8.  Not all of each question is answered, but you should get the idea.
+
+### Plotting
+
+```{r}
+autoplot(train)
+ggsubseriesplot(train)
+ggseasonplot(train)
+```
+
+This is clearly seasonal.  There may be a trend, and may be some cyclicality.  For classical decomposition purposes, multiplicative is probably best, because the seasonality in the middle is smaller than in the early and later years of the training set.
+
+### Classical Decomposition
+
+Here I'm going to show the automated and semi-automated way to do classical decomposition and seasonal adjustment.
+
+```{r}
+decomp <- decompose(train, type="multiplicative")
+autoplot(decomp)
+
+sadj.train <- seasadj(decomp)
+
+sadj.train_fcast <- rwf(sadj.train, drift=TRUE, h=18)
+
+autoplot(sadj.train_fcast) + autolayer(test)
+
+reseason <- numeric(length=12)
+
+     # You MUST create the vector you're going to populate, first.  If you don't know the length
+     # of the ultimate vector, just initialize it as vector-name-here <- NULL.
+
+reseason <- (decomp$seasonal[106:123])*(sadj.train_fcast$mean)
+
+autoplot(sadj.train_fcast, PI=FALSE) + autolayer(reseason) + autolayer(test)
+
+```
+
+Suppose you want to recreate an original datapoint from deseasonalized data.
+
+```{r}
+obs_7_orig <- decomp$trend[7]*decomp$seasonal[7]*decomp$random[7]
+
+obs_7_orig; train[7]
+```
+
+If you were using additive instead of multiplicative decomposition, you'd add the T,S, and R terms instead of multiplying them.
+
+### Outliers
+
+Consider the impact of outliers, and see how impacts vary depending on whether they are in the beginning, middle, or end of the series.
+
+```{r}
+x<- train
+x[60] <- train[60] + 1000
+plot1 <- x %>% decompose(., type = "multiplicative") %>% seasadj() %>% autoplot()
+
+y<- train
+y[15] <- train[15] + 1000
+plot2 <- y %>% decompose(., type = "multiplicative") %>% seasadj() %>% autoplot()
+
+z<- train
+z[110] <- train[110] + 1000
+plot3 <- z %>% decompose(., type = "multiplicative") %>% seasadj() %>% autoplot()
+
+grid.arrange(plot1, plot2, plot3, ncol = 1)
+
+
+autoplot((x %>% decompose(., type = "multiplicative") %>% seasadj()) - (y %>% decompose(., type = "multiplicative") %>% seasadj()))
+
+autoplot((x %>% decompose(., type = "multiplicative") %>% seasadj()) - (z %>% decompose(., type = "multiplicative") %>% seasadj()))
+
+autoplot((y %>% decompose(., type = "multiplicative") %>% seasadj()) - (z %>% decompose(., type = "multiplicative") %>% seasadj()))
+
+```
+
+## Forecasts with STL
+
+```{r}
+library(stlplus)
+
+stlplus(train, s.window = 7) %>% plot_seasonal()
+stlplus(train, s.window = 9) %>% plot_seasonal()
+stlplus(train, s.window = 11) %>% plot_seasonal()
+
+train.stl <- stl ( train, s.window = 9 )
+plot(train.stl)
+
+```
+
+### Compare the STL results with those obtained using SEATS and X11.
+
+```{r}
+train.SEATS <- train %>% seas() %>% autoplot() + ggtitle("SEATS decomposition of `train`")
+train.SEATS
+
+train.X11 <- train %>% seas(x11 = "") %>% autoplot() + ggtitle("X11 decomposition of `train`")
+train.X11
+
+grid.arrange(train.SEATS,train.X11, nrow = 1)
+```
+
+### Plotting Seasonally Adjusted Data
+
+Compute and plot the seasonally adjusted data.
+
+```{r}
+train_sadj <- seasadj ( stl ( train, s.window = 9, robust = TRUE))
+autoplot(train_sadj) + autolayer(train)
+```
+
+### Use a naive method to produce forecasts of the seasonally adjusted data.
+
+```{r}
+train_sadj.naive <- rwf ( train_sadj, drift = TRUE)
+autoplot(train_sadj.naive)
+```
+
+### Use stlf() to reseasonalize the results, giving forecasts for the original data.
+
+```{r}
+train.stlf <- stlf ( train, method = "naive" )
+autoplot(train.stlf)
+checkresiduals(train.stlf)
+```
+
+### STL vs Seasonal Naive
+
+Compare forecasts from stlf() with those from snaive(), using a test set.
+
+```{r}
+
+train %>% stlf(s.window = 9, robust = TRUE) %>% accuracy(.,test)
+train %>% snaive() %>% accuracy(.,test)
+```
