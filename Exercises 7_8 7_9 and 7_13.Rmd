@@ -1,0 +1,145 @@
+---
+title: "FPP 7.8 & 7.9"
+author: "CW"
+date: "May 1, 2018"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, message = FALSE, warning = FALSE}
+library(fpp2)
+library(readxl)
+```
+
+```{r }
+retaildata <- read_excel("~/CWU/ECON 325/ECON 325 Spring 2018/expandedretail.xlsx", skip = 1)
+
+retail.ts <- retaildata[,15]
+retail.ts <- ts ( retail.ts, start = c(1982,4), frequency = 12 )
+
+retail.ts.train <- window ( retail.ts, end = c(2012,12) )
+retail.ts.test <- window ( retail.ts, start = c(2013,1) )
+
+```
+
+## 7.8 
+
+Consider the retail data from several earlier assignments.
+
+### (a) 
+
+Why is multiplicative seasonality necessary for this series?
+
+### (b) 
+
+Apply Holt-Winters’ multiplicative method to the data. Experiment with making the trend damped.
+
+```{r}
+
+retail.hw <- retail.ts.train %>% hw(., multiplicative = TRUE, damped = FALSE)
+retail.hw.damped <- retail.ts.train %>% hw(., multiplicative = TRUE, damped = TRUE)
+
+```
+
+### (c) Compare the RMSE of the one-step forecasts from the two methods. Which do you prefer?
+
+``` {r}
+
+accuracy(retail.hw)
+accuracy(retail.hw.damped)
+
+autoplot(retail.hw)
+autoplot(retail.hw.damped)
+```
+
+### (d)
+
+Check that the residuals from the best method look like white noise.
+
+```{r}
+
+checkresiduals(retail.hw)
+checkresiduals(retail.hw.damped)
+
+```
+
+Neither one of these has white noise residuals.
+
+### (e)
+
+Now find the test set RMSE. Can you beat the seasonal naïve approach from Exercise 7 in Section 3.7?
+
+```{r}
+
+accuracy(retail.hw, retail.ts.test)
+accuracy(retail.hw.damped, retail.ts.test)
+
+retail.ts.train %>% snaive() %>% accuracy(.,retail.ts.test)
+
+```
+
+## 7.9 
+
+For the same retail data, try an STL decomposition applied to the Box-Cox transformed series, followed by ETS on the seasonally adjusted data. How does that compare with your best previous forecasts on the test set?
+
+```{r}
+
+retail.ts.train.lambda <- BoxCox.lambda(retail.ts.train)
+retail.ts.train.ets <- stlf(retail.ts.train, lambda = retail.ts.train.lambda, method = "ets")
+
+accuracy(retail.ts.train.ets, retail.ts.test)
+
+```
+
+
+## 7.13
+
+```{r}
+three.forecasts <- function(y) {
+  train <- head(y, length(y) - 3*frequency(y))
+  testdata <- tail(y, 3*frequency(y))
+  ets.fcast <- ets ( train ) %>% forecast(.,h=(3*frequency(y))) %>% accuracy(.,testdata) %>% print()
+  train %>% snaive(.,h=(3*frequency(y))) %>% accuracy(.,testdata) %>% print()
+  train %>% stlf(., lambda=BoxCox.lambda(y), h=(3*frequency(y))) %>% accuracy(.,testdata) %>% print()
+}
+```
+
+### ausbeer data
+
+```{r}
+three.forecasts(ausbeer)
+```
+
+### bricksq data
+
+```{r}
+three.forecasts(bricksq)
+```
+
+### dole data
+
+```{r}
+three.forecasts(dole)
+```
+
+### a10 data
+
+```{r}
+three.forecasts(a10)
+```
+
+### h02 data
+
+```{r}
+three.forecasts(h02)
+```
+
+### usmelec data
+
+```{r}
+three.forecasts(usmelec)
+```
+
